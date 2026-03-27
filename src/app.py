@@ -1,7 +1,8 @@
 import asyncio
 import os
+import base64
 from pathlib import Path
-from fastapi import FastAPI, BackgroundTasks, Form, HTTPException, Request
+from fastapi import FastAPI, BackgroundTasks, Form, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -124,6 +125,72 @@ async def generate_caption(text: str = Form(...)):
     except Exception as e:
         print(f"Caption General Error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate: {str(e)}")
+
+
+@app.post("/api/process_ocr")
+async def process_ocr(image: UploadFile = File(...)):
+    """Extracts text from a screenshot using AI vision (OpenRouter)."""
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not api_key or api_key == "your_openrouter_key_here":
+        raise HTTPException(status_code=400, detail="Missing OpenRouter API Key in .env file.")
+
+    # Read and encode the image
+    content = await image.read()
+    if len(content) > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(status_code=400, detail="Image is too large. Please use an image under 10MB.")
+
+    # Determine MIME type
+    mime = image.content_type or "image/png"
+    b64_data = base64.b64encode(content).decode("utf-8")
+    data_url = f"data:{mime};base64,{b64_data}"
+
+    prompt = (
+        "You are an expert text extractor. Look at this screenshot of a Reddit post or social media story. "
+        "Extract ONLY the story/body text content. Do NOT include usernames, subreddit names, upvote counts, "
+        "timestamps, UI elements, or any metadata. Clean up the text: remove markdown artifacts, fix obvious "
+        "OCR errors, and present the story as clean, readable paragraphs. If there is no readable story text, "
+        "respond with exactly: NO_TEXT_FOUND"
+    )
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": data_url}}
+                    ]
+                }]
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+        extracted = data["choices"][0]["message"]["content"].strip()
+
+        if extracted == "NO_TEXT_FOUND" or len(extracted) < 10:
+            raise HTTPException(status_code=400, detail="Could not find readable story text in this image. Try a clearer screenshot.")
+
+        return {"text": extracted}
+
+    except requests.exceptions.RequestException as e:
+        err_msg = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            err_msg += f" | Response: {e.response.text}"
+        print(f"OCR API Error: {err_msg}")
+        raise HTTPException(status_code=500, detail=f"AI Vision API Error: {err_msg}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"OCR General Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process image: {str(e)}")
 
 
 

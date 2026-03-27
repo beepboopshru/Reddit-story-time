@@ -41,6 +41,18 @@
                         <span id="fetchStatus" class="fetch-status"></span>
                     </div>
 
+                    <!-- OCR Screenshot Upload -->
+                    <div class="control-group">
+                        <label>Extract Text from Screenshot</label>
+                        <div class="ocr-row">
+                            <input type="file" id="ocrFileInput" accept="image/*" hidden>
+                            <button type="button" id="btnOcr" class="btn-secondary" style="width:100%;">
+                                <span class="icon">📷</span> Upload Screenshot &amp; Extract Text
+                            </button>
+                        </div>
+                        <span id="ocrStatus" class="fetch-status"></span>
+                    </div>
+
                     <!-- Script Section -->
                     <div class="control-group">
                         <label for="storyText">Script / Story</label>

@@ -275,6 +275,56 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- OCR Screenshot Upload ---
+    const btnOcr = document.getElementById('btnOcr');
+    const ocrFileInput = document.getElementById('ocrFileInput');
+    const ocrStatus = document.getElementById('ocrStatus');
+
+    if (btnOcr && ocrFileInput && ocrStatus) {
+        btnOcr.addEventListener('click', () => ocrFileInput.click());
+
+        ocrFileInput.addEventListener('change', async () => {
+            const file = ocrFileInput.files[0];
+            if (!file) return;
+
+            ocrStatus.textContent = '';
+            ocrStatus.className = 'fetch-status';
+            btnOcr.innerHTML = '<span class="icon">⌛</span> Extracting text...';
+            btnOcr.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('image', file);
+
+                const res = await fetch('/api/process_ocr', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || `Server error (${res.status})`);
+                }
+
+                const data = await res.json();
+                if (storyText) storyText.value = data.text;
+
+                ocrStatus.textContent = `✅ Extracted ${data.text.length} characters from screenshot.`;
+                ocrStatus.className = 'fetch-status fetch-success';
+                btnOcr.innerHTML = '<span class="icon">📷</span> Upload Another Screenshot';
+
+            } catch (err) {
+                console.error('OCR Error:', err);
+                ocrStatus.textContent = `❌ ${err.message}`;
+                ocrStatus.className = 'fetch-status fetch-error';
+                btnOcr.innerHTML = '<span class="icon">📷</span> Upload Screenshot & Extract Text';
+            } finally {
+                btnOcr.disabled = false;
+                ocrFileInput.value = ''; // Reset so same file can be re-selected
+            }
+        });
+    }
+
     // --- Form Submission & Rendering ---
     
     function addLog(msg) {
