@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+myenv/
+venv/
+ENV/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# Project specific
+temp/
+assets/outputs/*
+!assets/outputs/.gitkeep
+assets/background_videos/*
+!assets/background_videos/.gitkeep
+assets/bg_music/*
+!assets/bg_music/.gitkeep
+app_debug.log
+ffmpeg_last_run.log
+*.mp4
+*.mp3
+*.jpg
+*.ass
+*.json
+
+# Logs
+*.log

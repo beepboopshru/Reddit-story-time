@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reel Maker Studio</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Load Impact font locally for accurate preview -->
+    <style>
+        @font-face {
+            font-family: 'Impact';
+            src: local('Impact');
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🎬</span>
+                <h1>Reel Maker Studio</h1>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            <!-- Left Pane: Controls -->
+            <section class="controls-pane glass-panel">
+                <form id="renderForm">
+                    <!-- Fetch from Reddit URL -->
+                    <div class="control-group">
+                        <label for="redditUrl">Fetch from Reddit</label>
+                        <div class="fetch-url-row">
+                            <input type="text" id="redditUrl" placeholder="Paste a Reddit post URL (e.g. https://reddit.com/r/AskReddit/comments/...)" autocomplete="off">
+                            <button type="button" id="btnFetchReddit" class="btn-secondary">
+                                <span class="icon">🔗</span> Fetch
+                            </button>
+                        </div>
+                        <span id="fetchStatus" class="fetch-status"></span>
+                    </div>
+
+                    <!-- Script Section -->
+                    <div class="control-group">
+                        <label for="storyText">Script / Story</label>
+                        <textarea id="storyText" name="text" rows="8" placeholder="Paste your Reddit story or custom script here..." required></textarea>
+                    </div>
+
+                    <!-- Voice Section -->
+                    <div class="control-group">
+                        <label for="voiceSelect">Voice Actor</label>
+                        <div class="voice-controls">
+                            <select id="voiceSelect" name="voice" required>
+                                <option value="" disabled selected>Loading voices...</option>
+                            </select>
+                            <button type="button" id="btnPreviewAudio" class="btn-secondary" disabled>
+                                <span class="icon">▶️</span> Demo
+                            </button>
+                        </div>
+                        <audio id="audioPlayer" style="display: none;"></audio>
+                    </div>
+
+                    <!-- Styling Section -->
+                    <div class="control-group styling-group">
+                        <h3>Subtitles & Styling</h3>
+                        
+                        <div class="slider-group">
+                            <label for="fontSize">Font Size (<span id="fontSizeDisplay">110</span>px)</label>
+                            <input type="range" id="fontSize" name="font_size" min="60" max="150" value="110">
+                        </div>
+
+                        <div class="color-picker-group">
+                            <div class="picker">
+                                <label for="fontColor">Highlight Color</label>
+                                <input type="color" id="fontColor" name="font_color" value="#FFD700">
+                            </div>
+                            <div class="picker">
+                                <label for="strokeColor">Outline Color</label>
+                                <input type="color" id="strokeColor" name="stroke_color" value="#000000">
+                            </div>
+                        </div>
+
+                        <div class="slider-group">
+                            <label for="strokeWidth">Outline Thickness (<span id="strokeWidthDisplay">3</span>px)</label>
+                            <input type="range" id="strokeWidth" name="stroke_width" min="1" max="10" value="3">
+                        </div>
+                    </div>
+
+                    <!-- Video Settings Section -->
+                    <div class="control-group styling-group">
+                        <h3>Video & Audio Settings</h3>
+                        
+                        <div class="slider-group">
+                            <label for="maxDuration">Max Duration per Part (<span id="maxDurationDisplay">60</span>s)</label>
+                            <input type="range" id="maxDuration" name="max_duration" min="15" max="180" step="5" value="60">
+                        </div>
+
+                        <div class="slider-group">
+                            <label for="ttsRate">Speech Speed (<span id="ttsRateDisplay">+10</span>%)</label>
+                            <input type="range" id="ttsRate" name="tts_rate" min="-50" max="100" step="5" value="10">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 4px;">+10% to +15% is usually best for reels.</small>
+                        </div>
+
+                        <div class="control-group" style="margin-bottom: 0;">
+                            <label for="videoBitrate">Video Quality (Bitrate)</label>
+                            <input type="text" id="videoBitrate" name="video_bitrate" value="15000k" placeholder="e.g. 15000k">
+                        </div>
+
+                        <div class="control-group" style="margin-bottom: 0; margin-top: 1.2rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <label for="videoSpeed" style="margin-bottom: 0;">Video Playback Speed</label>
+                                <span id="videoSpeedDisplay" style="font-size: 0.85rem; color: var(--accent); font-weight: 500;">1.0x</span>
+                            </div>
+                            <input type="range" id="videoSpeed" name="video_speed" min="0.5" max="2.0" step="0.1" value="1.0">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 4px;">Speed up the background video (e.g. 1.5x for faster gameplay).</small>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-top: 1rem;">
+                            <div>
+                                <label for="bgVideo">Background Video</label>
+                                <select id="bgVideo" name="bg_video" style="width:100%;">
+                                    <option value="random">🔀 Random</option>
+                                    <option value="" disabled>⌛ Loading videos...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="bgMusic">Background Music</label>
+                                <select id="bgMusic" name="bg_music" style="width:100%;">
+                                    <option value="random">🔀 Random</option>
+                                    <option value="none">🔇 None</option>
+                                    <option value="" disabled>⌛ Loading music...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- Reddit Intro Card Section -->
+                    <div class="control-group styling-group">
+                        <h3>📋 Reddit Intro Card</h3>
+                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                            These details appear on the card shown at the start of Part 1 while the title is spoken.
+                        </p>
+
+                        <!-- Live Card Mockup -->
+                        <div id="cardMockup" style="
+                            background: #fff;
+                            border-radius: 14px;
+                            padding: 16px 18px;
+                            margin-bottom: 1.2rem;
+                            box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+                            font-family: 'Inter', sans-serif;
+                            color: #111;
+                        ">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                <div style="width:36px; height:36px; border-radius:50%; background:#FF5500; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">🤖</div>
+                                <div>
+                                    <div style="font-weight:700; font-size:0.9rem;" id="mockSubreddit">r/AskReddit</div>
+                                    <div style="font-size:0.75rem; color:#888;" id="mockMeta">u/user · 2d</div>
+                                </div>
+                            </div>
+                            <div style="font-weight:700; font-size:1.05rem; line-height:1.4; color:#111; margin-bottom:12px;" id="mockTitle">Your post title will appear here</div>
+                            <div style="display:flex; gap:18px; font-size:0.82rem; color:#666; border-top:1px solid #eee; padding-top:10px;">
+                                <span>▲ <span id="mockScore">0</span></span>
+                                <span>💬 <span id="mockComments">0</span></span>
+                            </div>
+                        </div>
+
+                        <div class="control-group" style="margin-bottom:0.8rem;">
+                            <label for="postTitle">Post Title</label>
+                            <input type="text" id="postTitle" name="title" placeholder="e.g. What are signs someone is unintelligent?" style="width:100%;">
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:0.8rem;">
+                            <div>
+                                <label for="postSubreddit" style="font-size:0.85rem; color:var(--text-secondary);">Subreddit</label>
+                                <input type="text" id="postSubreddit" name="subreddit" value="AskReddit" placeholder="AskReddit">
+                            </div>
+                            <div>
+                                <label for="postUsername" style="font-size:0.85rem; color:var(--text-secondary);">Username</label>
+                                <input type="text" id="postUsername" name="username" value="u/user" placeholder="u/yourname">
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.8rem;">
+                            <div>
+                                <label for="postScore" style="font-size:0.85rem; color:var(--text-secondary);">Upvotes</label>
+                                <input type="number" id="postScore" name="score" value="0" min="0" placeholder="11700">
+                            </div>
+                            <div>
+                                <label for="postComments" style="font-size:0.85rem; color:var(--text-secondary);">Comments</label>
+                                <input type="number" id="postComments" name="num_comments" value="0" min="0" placeholder="10000">
+                            </div>
+                            <div>
+                                <label for="postAge" style="font-size:0.85rem; color:var(--text-secondary);">Age</label>
+                                <input type="text" id="postAge" name="post_age" value="2d" placeholder="2d">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Section -->
+                    <div class="action-group">
+                        <button type="submit" id="btnRender" class="btn-primary">
+                            <span class="icon">🚀</span> Generate Reel
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Right Pane: Preview & Output -->
+            <section class="preview-pane">
+                
+                <!-- Live Subtitle Preview -->
+                <div class="live-preview-box glass-panel">
+                    <h3>Live Caption Preview</h3>
+                    <div class="video-mockup">
+                        <div class="mockup-bg"></div>
+                        <div class="subtitle-container">
+                            <span class="preview-word normal">SO </span>
+                            <span class="preview-word normal">I </span>
+                            <span class="preview-word highlight" id="previewHighlight">WON </span>
+                            <span class="preview-word normal">FIFTY </span>
+                            <span class="preview-word normal">THOUSAND </span>
+                            <span class="preview-word normal">DOLLARS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Render Status & Output -->
+                <div class="status-box glass-panel">
+                    <h3>Render Status</h3>
+                    <div class="terminal" id="terminalLog">
+                        <div class="log-line">Waiting to start rendering...</div>
+                    </div>
+                </div>
+
+                <!-- AI Caption Generator -->
+                <div class="caption-generator-box glass-panel">
+                    <h3>AI Social Media Caption</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Let AI generate a viral TikTok/Instagram caption for your story based on the script above!</p>
+                    <button type="button" id="btnGenerateCaption" class="btn-secondary" style="width: 100%; margin-bottom: 1rem;">
+                        <span class="icon">✨</span> Generate Viral Caption
+                    </button>
+                    <textarea id="aiCaptionOutput" rows="4" placeholder="Your AI-generated caption with hashtags will appear here..." readonly style="background: rgba(0,0,0,0.3); color: var(--accent); font-size: 0.95rem;"></textarea>
+                </div>
+
+                <!-- Thumbnail Generator -->
+                <div class="thumbnail-generator-box glass-panel" style="margin-top: 1rem;">
+                    <h3>Thumbnail Generator</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Creates a 1080x1920 image from a random background frame using your chosen colors.</p>
+                    
+                    <div class="control-group" style="margin-bottom: 1rem;">
+                        <input type="text" id="thumbnailText" placeholder="Enter bold title for your thumbnail..." style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; border-radius: 6px;">
+                    </div>
+                    
+                    <button type="button" id="btnGenerateThumbnail" class="btn-secondary" style="width: 100%; margin-bottom: 1rem;">
+                        <span class="icon">🖼️</span> Generate Thumbnail
+                    </button>
+                    
+                    <div id="thumbnailResultBox" style="display: none; text-align: center;">
+                        <img id="thumbnailPreview" src="" alt="Thumbnail Preview" style="max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);">
+                        <a id="btnDownloadThumbnail" href="#" download="thumbnail.jpg" class="btn-primary" style="display: inline-block; margin-top: 0.5rem; text-decoration: none;">⬇️ Download HD</a>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

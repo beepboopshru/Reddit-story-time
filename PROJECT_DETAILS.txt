@@ -1,0 +1,70 @@
+# PROJECT OVERVIEW: Reel Maker Studio
+# -----------------------------------
+# This project is an automated video generation pipeline designed to create 
+# vertical short-form videos (Reels/TikToks/Shorts) from Reddit stories or custom text.
+
+## 1. CORE PURPOSE
+- Scrape viral stories from specified subreddits (e.g., AskReddit, nosleep).
+- Convert text to high-quality speech using Microsoft Edge TTS.
+- Generate precise, word-level timestamps using Faster-Whisper.
+- Compose a final vertical video (1080x1920) with:
+    - Random background gameplay/scenery video.
+    - An interactive "Reddit Intro Card" showing post metadata.
+    - Synchronized "Karaoke-style" subtitles.
+    - Random background music.
+    - Automatic splitting into multiple "Parts" if the story is long.
+
+## 2. TECHNOLOGY STACK
+- Language: Python 3.10+
+- Web Framework: FastAPI (for the Web UI)
+- Video Processing: FFmpeg (via subprocess and imageio-ffmpeg)
+- Speech (TTS): edge-tts (Microsoft Edge TTS engine)
+- Transcription: faster-whisper (CTranslate2 backend for OpenAI Whisper)
+- Reddit API: PRAW (Python Reddit API Wrapper)
+- Audio Handling: pydub
+- Downloader: yt-dlp (for fetching background assets)
+
+## 3. PROJECT STRUCTURE
+/
+├── .env                # Environment variables (API keys, settings)
+├── requirements.txt    # Project dependencies
+├── src/                # Source code
+│   ├── app.py          # FastAPI Web Server (Web UI Entry Point)
+│   ├── main.py         # Pipeline Logic (CLI Entry Point)
+│   ├── processor.py    # FFmpeg Video Composition Engine
+│   ├── scraper.py      # Reddit Scraping Logic (PRAW)
+│   ├── tts.py          # Text-to-Speech Engine (edge-tts)
+│   ├── transcription.py# Transcription & .ass Subtitle Generation
+│   ├── reddit_card.py  # Intro Card Renderer (HTML -> Image)
+│   ├── thumbnail.py    # Thumbnail Generator
+│   ├── utils.py        # Helper functions & Path management
+│   └── static/         # Web UI assets (HTML/CSS/JS)
+├── assets/             # Media assets
+│   ├── background_videos/ # Loopable vertical videos
+│   ├── bg_music/          # Background tracks
+│   └── outputs/           # Finished Reels
+└── temp/               # Cache & Intermediate files (TTS, JSON, ASS)
+
+## 4. WORKFLOW PIPELINE (main.py)
+1. DATA ACQUISITION: Scrape Reddit (scraper.py) or take manual input.
+2. AUDIO GENERATION: Create .mp3 from text using edge-tts (tts.py).
+3. TRANSCRIPTION: Process audio through Whisper to get word-level timing (transcription.py).
+4. SUBTITLE GENERATION: Convert timestamps to an .ass subtitle file with styles.
+5. ASSET SELECTION: Pick random video/music from /assets.
+6. COMPOSITION: Run a complex FFmpeg command to layer video, audio, intro card, and subtitles (processor.py).
+7. MULTI-PART LOGIC: If duration > 60s, split into Parts with "Follow for Part X" overlays.
+
+## 5. ACCESS & USAGE
+- CLI MODE: `python src/main.py --text "My story here"` or `python src/main.py`
+- WEB UI: `python src/app.py` then visit http://localhost:8000
+    - Features: Custom font colors, voice selection, background preview, and AI caption generation (OpenRouter).
+
+## 6. KEY DEPENDENCIES (PIP)
+- praw, edge-tts, faster-whisper, fastapi, uvicorn, pydub, yt-dlp, jinja2, requests
+
+## 7. ENVIRONMENT CONFIGURATION (.env)
+- PRAW_CLIENT_ID / SECRET: For Reddit scraping.
+- OPENROUTER_API_KEY: For AI caption generation in Web UI.
+- WHISPER_MODEL: 'base', 'small', etc. (affects speed/accuracy).
+- DEVICE: 'cpu' or 'cuda' for hardware acceleration.
+- VIDEO_CODEC: 'libx264' (CPU) or 'h264_nvenc' (GPU).
