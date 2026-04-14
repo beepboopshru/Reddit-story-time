@@ -6,8 +6,12 @@ Generates precise timestamps for karaoke-style subtitles.
 import json
 from pathlib import Path
 from dataclasses import dataclass, asdict
+
+from utils import get_env, TEMP_DIR, configure_windows_cuda_runtime
+
+configure_windows_cuda_runtime()
+
 from faster_whisper import WhisperModel
-from utils import get_env, TEMP_DIR
 
 
 @dataclass

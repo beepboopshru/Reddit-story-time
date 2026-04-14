@@ -32,6 +32,45 @@ def get_env(key: str, default: str = "") -> str:
     return os.getenv(key, default)
 
 
+def configure_windows_cuda_runtime() -> None:
+    """
+    Make bundled NVIDIA CUDA DLLs inside the current venv discoverable on Windows.
+
+    CTranslate2/Faster-Whisper can use the pip-installed NVIDIA runtime packages,
+    but Windows often fails to locate their DLLs unless the package bin dirs are
+    added to PATH (and DLL search paths) before the libraries are loaded.
+    """
+    if os.name != "nt":
+        return
+
+    site_packages = ROOT_DIR / ".venv" / "Lib" / "site-packages"
+    nvidia_root = site_packages / "nvidia"
+    if not nvidia_root.exists():
+        return
+
+    dll_dirs: list[Path] = []
+    for pkg_dir in nvidia_root.iterdir():
+        for subdir_name in ("bin", "lib"):
+            subdir = pkg_dir / subdir_name
+            if subdir.exists():
+                dll_dirs.append(subdir)
+
+    if not dll_dirs:
+        return
+
+    path_entries = os.environ.get("PATH", "").split(os.pathsep)
+    new_entries = [str(dll_dir.resolve()) for dll_dir in dll_dirs]
+    os.environ["PATH"] = os.pathsep.join(new_entries + path_entries)
+
+    add_dll_directory = getattr(os, "add_dll_directory", None)
+    if add_dll_directory:
+        for dll_dir in dll_dirs:
+            try:
+                add_dll_directory(str(dll_dir.resolve()))
+            except OSError:
+                pass
+
+
 def get_output_resolution() -> tuple[int, int]:
     """Parse OUTPUT_RESOLUTION from env (e.g., '1080x1920') into (width, height)."""
     res = get_env("OUTPUT_RESOLUTION", "1080x1920")

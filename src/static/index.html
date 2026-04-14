@@ -22,24 +22,46 @@
                 <span class="logo-icon">🎬</span>
                 <h1>Reel Maker Studio</h1>
             </div>
+            <a href="https://www.instagram.com/" target="_blank" class="btn-quick-link" title="Open Instagram in new tab" style="margin-left: auto; padding: 0.6rem 1rem;">
+                📸 Instagram
+            </a>
         </header>
+
+        <!-- Subreddit Quick Links -->
+        <div class="quick-links">
+            <a href="https://www.reddit.com/r/AITAH/top/" target="_blank" class="btn-quick-link">r/AITAH</a>
+            <a href="https://www.reddit.com/r/nosleep/top/" target="_blank" class="btn-quick-link">r/nosleep</a>
+            <a href="https://www.reddit.com/r/Glitch_in_the_Matrix/top/" target="_blank" class="btn-quick-link">r/Glitch_in_the_Matrix</a>
+            <a href="https://www.reddit.com/r/Stoicism/top/" target="_blank" class="btn-quick-link">r/Stoicism</a>
+            <a href="https://www.reddit.com/r/Adulting/top/" target="_blank" class="btn-quick-link">r/Adulting</a>
+            <a href="https://www.reddit.com/r/AskReddit/top/" target="_blank" class="btn-quick-link">r/AskReddit</a>
+            <a href="https://www.reddit.com/r/unpopularopinion/top/" target="_blank" class="btn-quick-link">r/unpopularopinion</a>
+        </div>
 
         <!-- Main Workspace -->
         <main class="workspace">
             <!-- Left Pane: Controls -->
             <section class="controls-pane glass-panel">
                 <form id="renderForm">
-                    <!-- Fetch from Reddit URL -->
-                    <div class="control-group">
-                        <label for="redditUrl">Fetch from Reddit</label>
-                        <div class="fetch-url-row">
-                            <input type="text" id="redditUrl" placeholder="Paste a Reddit post URL (e.g. https://reddit.com/r/AskReddit/comments/...)" autocomplete="off">
-                            <button type="button" id="btnFetchReddit" class="btn-secondary">
-                                <span class="icon">🔗</span> Fetch
+                    <!-- Paste from Reddit -->
+                    <div class="control-group smart-paste-section">
+                        <div class="smart-paste-header">
+                            <label for="smartPasteInput">⚡ Paste from Reddit</label>
+                        </div>
+                        <p class="smart-paste-hint">Copy a post directly from Reddit (Ctrl+A, Ctrl+C on the post page) and paste below. Title, subreddit, user, score, and body auto-fill — then hit Generate.</p>
+                        <textarea id="smartPasteInput" rows="6" placeholder="Go to AITAH&#10;r/AITAH&#10;•&#10;9m ago&#10;SomeUsername&#10;&#10;Post title here&#10;Post body paragraphs here...&#10;&#10;Upvote&#10;1200&#10;Downvote&#10;45&#10;Go to comments&#10;Share"></textarea>
+                        <div class="smart-paste-actions">
+                            <button type="button" id="btnSmartParse" class="btn-smart-parse">
+                                <span class="icon">🧠</span> Parse &amp; Fill Fields
+                            </button>
+                            <button type="button" id="btnClearForm" class="btn-secondary btn-clear">
+                                <span class="icon">🗑️</span> Clear All
                             </button>
                         </div>
-                        <span id="fetchStatus" class="fetch-status"></span>
+                        <span id="smartPasteStatus" class="fetch-status"></span>
                     </div>
+
+                    <div class="section-divider"><span>or use a screenshot</span></div>
 
                     <!-- OCR Screenshot Upload -->
                     <div class="control-group">
@@ -78,8 +100,8 @@
                         <h3>Subtitles & Styling</h3>
                         
                         <div class="slider-group">
-                            <label for="fontSize">Font Size (<span id="fontSizeDisplay">110</span>px)</label>
-                            <input type="range" id="fontSize" name="font_size" min="60" max="150" value="110">
+                            <label for="fontSize">Font Size (<span id="fontSizeDisplay">150</span>px)</label>
+                            <input type="range" id="fontSize" name="font_size" min="60" max="150" value="150">
                         </div>
 
                         <div class="color-picker-group">
@@ -109,14 +131,14 @@
                         </div>
 
                         <div class="slider-group">
-                            <label for="ttsRate">Speech Speed (<span id="ttsRateDisplay">+10</span>%)</label>
-                            <input type="range" id="ttsRate" name="tts_rate" min="-50" max="100" step="5" value="10">
-                            <small style="color: var(--text-secondary); display: block; margin-top: 4px;">+10% to +15% is usually best for reels.</small>
+                            <label for="ttsRate">Speech Speed (<span id="ttsRateDisplay">+60</span>%)</label>
+                            <input type="range" id="ttsRate" name="tts_rate" min="-50" max="100" step="5" value="60">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 4px;">+60% is usually best for fast-paced reels.</small>
                         </div>
 
                         <div class="control-group" style="margin-bottom: 0;">
                             <label for="videoBitrate">Video Quality (Bitrate)</label>
-                            <input type="text" id="videoBitrate" name="video_bitrate" value="15000k" placeholder="e.g. 15000k">
+                            <input type="text" id="videoBitrate" name="video_bitrate" value="50000k" placeholder="e.g. 50000k">
                         </div>
 
                         <div class="control-group" style="margin-bottom: 0; margin-top: 1.2rem;">
@@ -274,6 +296,43 @@
                         <img id="thumbnailPreview" src="" alt="Thumbnail Preview" style="max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);">
                         <a id="btnDownloadThumbnail" href="#" download="thumbnail.jpg" class="btn-primary" style="display: inline-block; margin-top: 0.5rem; text-decoration: none;">⬇️ Download HD</a>
                     </div>
+                </div>
+
+                <!-- Instagram Upload -->
+                <div class="ig-upload-box glass-panel" style="margin-top: 1rem;">
+                    <div class="ig-upload-header">
+                        <h3>📸 Instagram Upload</h3>
+                        <span class="ig-badge">Beta</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">Select a rendered video and upload it directly as an Instagram Reel.</p>
+
+                    <div class="control-group" style="margin-bottom: 1rem;">
+                        <label for="igVideoSelect" style="font-size: 0.85rem; color: var(--text-secondary);">Select Video</label>
+                        <div style="display: flex; gap: 0.6rem;">
+                            <select id="igVideoSelect" style="flex: 1;">
+                                <option value="" disabled selected>Loading videos...</option>
+                            </select>
+                            <button type="button" id="btnRefreshVideos" class="btn-secondary" style="padding: 0 0.8rem; flex-shrink: 0;" title="Refresh list">
+                                🔄
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-group" style="margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem;">
+                            <label for="igCaption" style="margin-bottom: 0; font-size: 0.85rem; color: var(--text-secondary);">Caption</label>
+                            <label class="ig-toggle-label">
+                                <input type="checkbox" id="igAutoCaption" checked>
+                                <span class="ig-toggle-text">Auto-generate</span>
+                            </label>
+                        </div>
+                        <textarea id="igCaption" rows="3" placeholder="Leave empty to auto-generate a viral caption, or type your own..." style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; font-size: 0.92rem;"></textarea>
+                    </div>
+
+                    <button type="button" id="btnUploadInstagram" class="btn-ig-upload">
+                        <span class="icon">📤</span> Upload to Instagram
+                    </button>
+                    <span id="igUploadStatus" class="fetch-status"></span>
                 </div>
 
             </section>

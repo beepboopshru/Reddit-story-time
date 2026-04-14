@@ -2,15 +2,13 @@
 main.py — Entry point for the Automated Reel Maker pipeline.
 
 Usage:
-    python main.py                     # Scrape + generate a reel
     python main.py --text "Custom text"  # Generate from custom text
-    python main.py --skip-scrape       # Use last cached story
+    python main.py --skip-scrape         # Use last cached story
 """
 
 import argparse
 from pathlib import Path
 
-from scraper import RedditScraper
 from tts import TTSEngine
 from transcription import Transcriber
 from processor import VideoProcessor, get_media_duration
@@ -49,32 +47,22 @@ def run_pipeline(
     if text:
         story_text = text
         print(f"📝 Using custom text ({len(story_text)} chars)")
+        # Cache for --skip-scrape reuse
+        (TEMP_DIR / "last_story.txt").write_text(story_text, encoding="utf-8")
+        (TEMP_DIR / "last_title.txt").write_text(title, encoding="utf-8")
     elif skip_scrape:
         cached = TEMP_DIR / "last_story.txt"
         if not cached.exists():
-            raise FileNotFoundError("No cached story found. Run without --skip-scrape first.")
+            raise FileNotFoundError("No cached story found. Run with --text first.")
         story_text = cached.read_text(encoding="utf-8")
-        title = TEMP_DIR / "last_title.txt"
-        title = title.read_text(encoding="utf-8") if title.exists() else "cached_reel"
+        title_cache = TEMP_DIR / "last_title.txt"
+        title = title_cache.read_text(encoding="utf-8") if title_cache.exists() else "cached_reel"
         print(f"📝 Loaded cached story ({len(story_text)} chars)")
     else:
-        print("🔍 Scraping Reddit for stories...")
-        scraper = RedditScraper()
-        stories = scraper.fetch_stories(limit=1)
-        if not stories:
-            raise RuntimeError("No suitable stories found. Try different subreddits or sort method.")
-
-        story = stories[0]
-        story_text = story.body  # body only — title is spoken separately as intro
-        title = story.title
-        subreddit = story.subreddit
-        username = f"u/user"
-        score = story.score
-        print(f"📰 Selected: [{story.subreddit}] {story.title} ({story.score}↑)")
-
-        # Cache for reuse
-        (TEMP_DIR / "last_story.txt").write_text(story_text, encoding="utf-8")
-        (TEMP_DIR / "last_title.txt").write_text(title, encoding="utf-8")
+        raise ValueError(
+            "text is required — Reddit scraping has been removed. "
+            "Pass --text \"your story\" or use --skip-scrape to reuse the last cached story."
+        )
 
     # ── Step 2: Text-to-Speech ────────────────────────────────────────────
     print("\n🎙️  Generating TTS audio...")
@@ -239,18 +227,17 @@ def run_pipeline(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="🎬 Automated Reel Maker — Reddit stories → short-form video",
+        description="🎬 Automated Reel Maker — text → short-form video",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py                          # Scrape Reddit + generate reel
-  python main.py --text "Hello world"     # Use custom text
-  python main.py --skip-scrape            # Reuse last scraped story
-  python main.py --bg-video clip.mp4      # Use specific background video
+  python main.py --text "Hello world"     # Generate reel from custom text
+  python main.py --skip-scrape            # Reuse last cached story
+  python main.py --text "..." --bg-video clip.mp4   # Use specific background video
         """,
     )
-    parser.add_argument("--text", type=str, help="Custom text to use instead of scraping")
-    parser.add_argument("--skip-scrape", action="store_true", help="Use last cached story")
+    parser.add_argument("--text", type=str, help="Story text to narrate (required unless --skip-scrape)")
+    parser.add_argument("--skip-scrape", action="store_true", help="Reuse last cached story from temp/")
     parser.add_argument("--bg-video", type=str, help="Path to a specific background video")
     parser.add_argument("--title", type=str, default="reddit_reel", help="Video title")
     parser.add_argument("--voice", type=str, help="TTS voice name or 'male'/'female' shortcut")

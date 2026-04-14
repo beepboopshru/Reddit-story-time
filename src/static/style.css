@@ -34,6 +34,35 @@ body {
     padding: 2rem;
 }
 
+.quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+.btn-quick-link {
+    text-decoration: none;
+    padding: 0.6rem 1.2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-quick-link:hover {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
 .header {
     margin-bottom: 2rem;
 }
@@ -320,7 +349,7 @@ input[type="color"]::-webkit-color-swatch {
     background: #000;
     border-radius: 8px;
     padding: 1rem;
-    height: 150px;
+    height: 220px;
     overflow-y: auto;
     font-family: monospace;
     font-size: 0.85rem;
@@ -329,4 +358,184 @@ input[type="color"]::-webkit-color-swatch {
 
 .log-line {
     margin-bottom: 0.2rem;
+}
+
+/* Smart Paste */
+.smart-paste-section {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.10));
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    border-radius: 14px;
+    padding: 1.4rem;
+}
+
+.smart-paste-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.3rem;
+}
+
+.smart-paste-header label {
+    margin-bottom: 0 !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+}
+
+.smart-paste-hint {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.7rem;
+}
+
+.smart-paste-section textarea {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.smart-paste-section textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.smart-paste-actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+}
+
+.btn-smart-parse {
+    flex: 1;
+    padding: 0.7rem 1rem;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    color: white;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: transform 0.15s, box-shadow 0.2s;
+}
+
+.btn-smart-parse:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+}
+
+.btn-copy-prompt {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #c4b5fd;
+    background: transparent;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-copy-prompt:hover {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.6);
+    color: #e0d4fc;
+}
+
+.btn-clear {
+    flex-shrink: 0;
+    padding: 0.7rem 1rem !important;
+}
+
+/* Section Divider */
+.section-divider {
+    display: flex;
+    align-items: center;
+    margin: 0.5rem 0 1.5rem;
+    gap: 1rem;
+}
+
+.section-divider::before,
+.section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+}
+
+.section-divider span {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+/* Instagram Upload */
+.ig-upload-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.6rem;
+}
+
+.ig-upload-header h3 {
+    margin-bottom: 0;
+}
+
+.ig-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    color: #fff;
+}
+
+.btn-ig-upload {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    color: white;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+    margin-bottom: 0.5rem;
+}
+
+.btn-ig-upload:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(225, 48, 108, 0.4);
+}
+
+.btn-ig-upload:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.ig-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.ig-toggle-label input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+.ig-toggle-text {
+    font-size: 0.78rem;
+    color: var(--accent);
+    font-weight: 500;
 }

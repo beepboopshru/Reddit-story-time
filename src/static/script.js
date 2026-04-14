@@ -36,12 +36,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 opt.textContent = voice.display;
                 voiceSelect.appendChild(opt);
             });
-            
-            // Enable preview button once loaded and selected
+
+            // Restore last-used voice so repeat visits are one-click
+            const lastVoice = localStorage.getItem('reelmaker.lastVoice');
+            if (lastVoice && Array.from(voiceSelect.options).some(o => o.value === lastVoice)) {
+                voiceSelect.value = lastVoice;
+                btnPreviewAudio.disabled = false;
+            }
+
             voiceSelect.addEventListener('change', () => {
                 btnPreviewAudio.disabled = !voiceSelect.value;
             });
-            
+
         } catch (err) {
             console.error(err);
             voiceSelect.innerHTML = '<option value="" disabled>Failed to load voices</option>';
@@ -212,69 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     updateCardPreview();
 
-    // --- Reddit URL Fetch ---
-    const btnFetchReddit = document.getElementById('btnFetchReddit');
-    const redditUrlInput = document.getElementById('redditUrl');
-    const fetchStatus = document.getElementById('fetchStatus');
-
-    if (btnFetchReddit && redditUrlInput && fetchStatus) {
-        btnFetchReddit.addEventListener('click', async () => {
-            const url = redditUrlInput.value.trim();
-            if (!url) {
-                fetchStatus.textContent = '⚠️ Please paste a Reddit URL first.';
-                fetchStatus.className = 'fetch-status fetch-error';
-                return;
-            }
-
-            // Reset status and disable button
-            fetchStatus.textContent = '';
-            fetchStatus.className = 'fetch-status';
-            btnFetchReddit.innerHTML = '<span class="icon">⌛</span> Fetching...';
-            btnFetchReddit.disabled = true;
-
-            try {
-                const formData = new FormData();
-                formData.append('url', url);
-
-                const res = await fetch('/api/fetch-reddit-post', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!res.ok) {
-                    const errData = await res.json();
-                    throw new Error(errData.detail || `Server error (${res.status})`);
-                }
-
-                const data = await res.json();
-
-                // Populate Story textarea
-                if (storyText) storyText.value = data.body;
-
-                // Populate Reddit Intro Card fields
-                if (postTitle) postTitle.value = data.title;
-                if (postSubreddit) postSubreddit.value = data.subreddit;
-                if (postUsername) postUsername.value = data.author;
-                if (postScore) postScore.value = data.score;
-
-                // Trigger card preview update
-                updateCardPreview();
-
-                fetchStatus.textContent = `✅ Fetched: "${data.title.substring(0, 60)}${data.title.length > 60 ? '...' : ''}"`;
-                fetchStatus.className = 'fetch-status fetch-success';
-                btnFetchReddit.innerHTML = '<span class="icon">🔗</span> Fetch';
-
-            } catch (err) {
-                console.error('Fetch Reddit Error:', err);
-                fetchStatus.textContent = `❌ ${err.message}`;
-                fetchStatus.className = 'fetch-status fetch-error';
-                btnFetchReddit.innerHTML = '<span class="icon">🔗</span> Fetch';
-            } finally {
-                btnFetchReddit.disabled = false;
-            }
-        });
-    }
-
     // --- OCR Screenshot Upload ---
     const btnOcr = document.getElementById('btnOcr');
     const ocrFileInput = document.getElementById('ocrFileInput');
@@ -335,6 +278,52 @@ document.addEventListener('DOMContentLoaded', () => {
         terminalLog.scrollTop = terminalLog.scrollHeight;
     }
 
+    function addRawLogs(rawText) {
+        rawText
+            .split(/\r?\n/)
+            .map(line => line.trimEnd())
+            .filter(Boolean)
+            .forEach(line => addLog(line));
+    }
+
+    function setRenderButton(label, disabled) {
+        btnRender.innerHTML = label;
+        btnRender.disabled = disabled;
+    }
+
+    async function monitorPipeline(jobId) {
+        let offset = 0;
+
+        while (true) {
+            const res = await fetch(`/api/process_status?job_id=${encodeURIComponent(jobId)}&offset=${offset}`);
+            if (!res.ok) {
+                throw new Error(`Status polling failed (${res.status})`);
+            }
+
+            const data = await res.json();
+            offset = data.offset ?? offset;
+
+            if (data.logs) {
+                addRawLogs(data.logs);
+            }
+
+            if (data.state === 'completed') {
+                addLog('Pipeline finished successfully.');
+                setRenderButton('<span class="icon">🚀</span> Generate Reel', false);
+                if (typeof loadOutputVideos === 'function') loadOutputVideos();
+                return;
+            }
+
+            if (data.state === 'failed') {
+                addLog(`Pipeline failed: ${data.error || 'Unknown error'}`);
+                setRenderButton('<span class="icon">⚠️</span> Failed. Try Again.', false);
+                return;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+    }
+
     renderForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -344,6 +333,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRender.disabled = true;
         btnRender.innerHTML = '<span class="icon">🚀</span> Launching Pipeline...';
         terminalLog.innerHTML = '';
+        // Scroll terminal into view so user can see the log output
+        terminalLog.scrollIntoView({ behavior: 'smooth', block: 'start' });
         addLog("Initializing rendering pipeline...");
         
         const formData = new FormData(renderForm);
@@ -363,9 +354,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (res.ok) {
                 const data = await res.json();
                 addLog(`✅ Server: ${data.status}`);
-                addLog("The pipeline is now running in the background.");
-                
+                addLog("Connected to live pipeline logs.");
+
                 btnRender.innerHTML = '<span class="icon">✅</span> Processing...';
+
+                // Remember the voice so next visit skips the pick.
+                if (voiceSelect.value) {
+                    localStorage.setItem('reelmaker.lastVoice', voiceSelect.value);
+                }
+
+                await monitorPipeline(data.job_id);
             } else {
                 const errText = await res.text();
                 addLog(`❌ Server Error: ${res.status} - ${errText}`);
@@ -481,6 +479,275 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 2000);
             } finally {
                 btnGenerateThumbnail.disabled = false;
+            }
+        });
+    }
+    // --- Paste from Reddit ---
+    const smartPasteInput = document.getElementById('smartPasteInput');
+    const btnSmartParse = document.getElementById('btnSmartParse');
+    const btnClearForm = document.getElementById('btnClearForm');
+    const smartPasteStatus = document.getElementById('smartPasteStatus');
+
+    // Parses a block copy-pasted directly from reddit.com. Example shape:
+    //   Go to AITAH
+    //   r/AITAH
+    //   •
+    //   9m ago
+    //   Username
+    //
+    //   Post title
+    //   Body paragraphs...
+    //
+    //   Upvote
+    //   1200
+    //   Downvote
+    //   45
+    //   Go to comments
+    //   Share
+    function parseRedditPaste(raw) {
+        const text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const lines = text.split('\n').map(s => s.trim());
+
+        let subredditIdx = -1, subreddit = '';
+        for (let i = 0; i < lines.length; i++) {
+            const m = lines[i].match(/^r\/([A-Za-z0-9_]+)$/);
+            if (m) { subreddit = m[1]; subredditIdx = i; break; }
+        }
+        if (!subreddit) return { error: "Couldn't find an 'r/subreddit' line — is this really a Reddit paste?" };
+
+        let ageIdx = -1, age = '';
+        const ageRe = /^(\d+\s*(?:s|sec|secs|m|min|mins|h|hr|hrs|d|day|days|w|wk|wks|mo|y|yr|yrs))\s+ago$/i;
+        for (let i = subredditIdx + 1; i < lines.length; i++) {
+            const m = lines[i].match(ageRe);
+            if (m) { age = m[1].replace(/\s+/g, ''); ageIdx = i; break; }
+        }
+        if (!age) return { error: "Couldn't find a post age like '9m ago'." };
+
+        let userIdx = -1, username = '';
+        for (let i = ageIdx + 1; i < lines.length; i++) {
+            if (lines[i]) {
+                username = 'u/' + lines[i].replace(/^u\//, '');
+                userIdx = i;
+                break;
+            }
+        }
+        if (!username || username === 'u/') return { error: "Couldn't find a username after the age line." };
+
+        let upvoteIdx = -1;
+        for (let i = userIdx + 1; i < lines.length; i++) {
+            if (lines[i] === 'Upvote') { upvoteIdx = i; break; }
+        }
+        if (upvoteIdx < 0) return { error: "Couldn't find the 'Upvote' marker that ends the body." };
+
+        let bodySlice = lines.slice(userIdx + 1, upvoteIdx);
+        while (bodySlice.length && !bodySlice[0]) bodySlice.shift();
+        while (bodySlice.length && !bodySlice[bodySlice.length - 1]) bodySlice.pop();
+        if (!bodySlice.length) return { error: "Post body is empty." };
+
+        const title = bodySlice[0];
+        let bodyLines = bodySlice.slice(1);
+        while (bodyLines.length && !bodyLines[0]) bodyLines.shift();
+        const body = bodyLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+
+        function parseRedditNum(s) {
+            const m = s.match(/^([\d.,]+)\s*([kmKM])?$/);
+            if (!m) return null;
+            const n = parseFloat(m[1].replace(/,/g, ''));
+            if (isNaN(n)) return null;
+            const suf = (m[2] || '').toLowerCase();
+            if (suf === 'k') return Math.round(n * 1000);
+            if (suf === 'm') return Math.round(n * 1_000_000);
+            return Math.round(n);
+        }
+
+        const stopMarkers = new Set(['Downvote', 'Go to comments', 'Share']);
+
+        let score = 0, scoreIdx = upvoteIdx;
+        for (let i = upvoteIdx + 1; i < lines.length; i++) {
+            if (!lines[i]) continue;
+            if (stopMarkers.has(lines[i])) break;
+            const v = parseRedditNum(lines[i]);
+            if (v !== null) { score = v; scoreIdx = i; break; }
+        }
+
+        let downvoteIdx = -1;
+        for (let i = scoreIdx + 1; i < lines.length; i++) {
+            if (lines[i] === 'Downvote') { downvoteIdx = i; break; }
+            if (lines[i] === 'Go to comments' || lines[i] === 'Share') break;
+        }
+        const commentsStart = downvoteIdx >= 0 ? downvoteIdx + 1 : scoreIdx + 1;
+        let comments = 0;
+        for (let i = commentsStart; i < lines.length; i++) {
+            if (!lines[i]) continue;
+            if (lines[i] === 'Go to comments' || lines[i] === 'Share') break;
+            const v = parseRedditNum(lines[i]);
+            if (v !== null) { comments = v; break; }
+        }
+
+        return { subreddit, age, username, title, body, score, comments };
+    }
+
+    if (btnSmartParse && smartPasteInput) {
+        btnSmartParse.addEventListener('click', () => {
+            const raw = smartPasteInput.value.trim();
+            if (!raw) {
+                smartPasteStatus.textContent = '⚠️ Paste a Reddit post first.';
+                smartPasteStatus.className = 'fetch-status fetch-error';
+                return;
+            }
+
+            const data = parseRedditPaste(raw);
+            if (data.error) {
+                smartPasteStatus.textContent = `⚠️ ${data.error}`;
+                smartPasteStatus.className = 'fetch-status fetch-error';
+                return;
+            }
+
+            if (postSubreddit) postSubreddit.value = data.subreddit;
+            if (postAge)       postAge.value = data.age;
+            if (postUsername)  postUsername.value = data.username;
+            if (postTitle)     postTitle.value = data.title;
+            if (storyText)     storyText.value = data.body;
+            if (postScore)     postScore.value = data.score;
+            if (postComments)  postComments.value = data.comments;
+
+            updateCardPreview();
+
+            const short = data.title.length > 60 ? data.title.substring(0, 60) + '…' : data.title;
+            smartPasteStatus.textContent = `✅ Parsed r/${data.subreddit} — "${short}"`;
+            smartPasteStatus.className = 'fetch-status fetch-success';
+            btnSmartParse.innerHTML = '<span class="icon">✅</span> Ready — hit Generate!';
+            setTimeout(() => {
+                btnSmartParse.innerHTML = '<span class="icon">🧠</span> Parse & Fill Fields';
+            }, 2500);
+
+            // One-click flow: jump the user straight to Generate.
+            if (btnRender) {
+                btnRender.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => btnRender.focus(), 500);
+            }
+        });
+    }
+
+    // Clear all form fields
+    if (btnClearForm) {
+        btnClearForm.addEventListener('click', () => {
+            if (smartPasteInput) smartPasteInput.value = '';
+            if (storyText) storyText.value = '';
+            if (postTitle) postTitle.value = '';
+            if (postSubreddit) postSubreddit.value = 'AskReddit';
+            if (postUsername) postUsername.value = 'u/user';
+            if (postScore) postScore.value = '0';
+            if (postComments) postComments.value = '0';
+            if (postAge) postAge.value = '2d';
+            if (smartPasteStatus) { smartPasteStatus.textContent = ''; smartPasteStatus.className = 'fetch-status'; }
+            updateCardPreview();
+        });
+    }
+
+    // --- Instagram Upload ---
+    const igVideoSelect = document.getElementById('igVideoSelect');
+    const btnRefreshVideos = document.getElementById('btnRefreshVideos');
+    const igCaption = document.getElementById('igCaption');
+    const igAutoCaption = document.getElementById('igAutoCaption');
+    const btnUploadInstagram = document.getElementById('btnUploadInstagram');
+    const igUploadStatus = document.getElementById('igUploadStatus');
+
+    async function loadOutputVideos() {
+        if (!igVideoSelect) return;
+        try {
+            const res = await fetch('/api/list_output_videos');
+            const data = await res.json();
+
+            igVideoSelect.innerHTML = '';
+            if (data.videos.length === 0) {
+                igVideoSelect.innerHTML = '<option value="" disabled selected>No videos found — render one first!</option>';
+                return;
+            }
+
+            data.videos.forEach((vid, i) => {
+                const opt = document.createElement('option');
+                opt.value = vid.name;
+                opt.textContent = `${vid.name} (${vid.size_mb} MB)`;
+                if (i === 0) opt.selected = true;
+                igVideoSelect.appendChild(opt);
+            });
+        } catch (err) {
+            console.error('Failed to load output videos:', err);
+            igVideoSelect.innerHTML = '<option value="" disabled>Failed to load videos</option>';
+        }
+    }
+
+    loadOutputVideos();
+
+    if (btnRefreshVideos) {
+        btnRefreshVideos.addEventListener('click', () => {
+            loadOutputVideos();
+        });
+    }
+
+    // Toggle caption textarea based on auto-caption checkbox
+    if (igAutoCaption && igCaption) {
+        igAutoCaption.addEventListener('change', () => {
+            if (igAutoCaption.checked) {
+                igCaption.placeholder = 'Caption will be auto-generated on upload...';
+                igCaption.value = '';
+            } else {
+                igCaption.placeholder = 'Type your instagram caption here...';
+            }
+        });
+    }
+
+    if (btnUploadInstagram) {
+        btnUploadInstagram.addEventListener('click', async () => {
+            const selectedVideo = igVideoSelect?.value;
+            if (!selectedVideo) {
+                igUploadStatus.textContent = '⚠️ Please select a video first.';
+                igUploadStatus.className = 'fetch-status fetch-error';
+                return;
+            }
+
+            btnUploadInstagram.disabled = true;
+            btnUploadInstagram.innerHTML = '<span class="icon">⌛</span> Logging in & Uploading...';
+            igUploadStatus.textContent = '';
+            igUploadStatus.className = 'fetch-status';
+
+            try {
+                const formData = new FormData();
+                formData.append('video_filename', selectedVideo);
+                formData.append('caption', igCaption?.value?.trim() || '');
+                formData.append('auto_caption', igAutoCaption?.checked ? 'true' : 'false');
+
+                const res = await fetch('/api/upload_instagram', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.detail || `Server error (${res.status})`);
+                }
+
+                const data = await res.json();
+                igUploadStatus.textContent = `✅ Uploaded! Caption: "${data.caption_used?.substring(0, 60)}..."`;
+                igUploadStatus.className = 'fetch-status fetch-success';
+                btnUploadInstagram.innerHTML = '<span class="icon">✅</span> Uploaded!';
+
+                setTimeout(() => {
+                    btnUploadInstagram.innerHTML = '<span class="icon">📤</span> Upload Another';
+                    btnUploadInstagram.disabled = false;
+                }, 3000);
+
+            } catch (err) {
+                console.error('Instagram Upload Error:', err);
+                igUploadStatus.textContent = `❌ ${err.message}`;
+                igUploadStatus.className = 'fetch-status fetch-error';
+                btnUploadInstagram.innerHTML = '<span class="icon">❌</span> Failed';
+
+                setTimeout(() => {
+                    btnUploadInstagram.innerHTML = '<span class="icon">📤</span> Upload to Instagram';
+                    btnUploadInstagram.disabled = false;
+                }, 3000);
             }
         });
     }
